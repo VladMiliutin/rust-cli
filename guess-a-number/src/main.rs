@@ -1,4 +1,4 @@
-use std::io;
+use std::{io, cmp::Ordering};
 use rand::Rng;
 
 fn main() {
@@ -16,10 +16,11 @@ fn main() {
 
         let mut guess: u32 = guess.trim().parse().expect("Expected unsigned integer");
         match guess.cmp(&secret) {
-            std::cmp::Ordering::Less => println!("Think greater"),
-            std::cmp::Ordering::Greater => println!("Think less"),
-            std::cmp::Ordering::Equal => {
-                println!("You are god damn right!")
+            Ordering::Less => println!("Think greater"),
+            Ordering::Greater => println!("Think less"),
+            Ordering::Equal => {
+                println!("You are god damn right!");
+                break;
             }
         }
     }
