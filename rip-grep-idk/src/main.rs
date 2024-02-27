@@ -29,11 +29,13 @@ fn main() {
 
 fn find_matches(path: &PathBuf, pattern: &String) -> Result<u16, std::io::Error> {
     println!("Reading path: {}", path.to_str().unwrap());
-    let mut entries: Vec<Result<Vec<String>, io::Error>> = std::fs::read_dir(path)?
+    let mut entries = std::fs::read_dir(path)?
         .map(|res| res
-             .map(|e| std::fs::read_to_string(e.path())
-                  .map(|content| find_matches_in_file(&content, pattern))
-            )
+             .map(|e| {
+                 println!("Path: {}", e.path().to_str().unwrap());
+                 std::fs::read_to_string(e.path())
+                    .map(|content| find_matches_in_file(&content, pattern))
+             })
         )
         .collect::<Result<Vec<_>, io::Error>>()?;
 
