@@ -1,4 +1,4 @@
-use std::{path::PathBuf, io, error::Error, fs::ReadDir}; 
+use std::{path::PathBuf, io, error::Error, fs::{ReadDir, DirEntry}}; 
 
 struct Cli {
     pattern: String,
@@ -32,14 +32,45 @@ fn find_matches(path: &PathBuf, pattern: &String) -> Result<u16, std::io::Error>
     let mut entries = std::fs::read_dir(path)?
         .map(|res| res
              .map(|e| {
-                 println!("Path: {}", e.path().to_str().unwrap());
-                 std::fs::read_to_string(e.path())
-                    .map(|content| find_matches_in_file(&content, pattern))
+                 find_matches_in_dir_or_file(e, pattern)
              })
         )
         .collect::<Result<Vec<_>, io::Error>>()?;
 
     Ok(1)
+}
+
+fn find_matches_in_dir_or_file(entry: DirEntry, pattern: &String) -> Vec<String> {
+     println!("Path: {}", entry.path().to_str().unwrap());
+     let mut results: Vec<String> = Vec::new();
+     if (entry.path().is_dir()) {
+         let dir_matches = std::fs::read_dir(entry.path())
+                      .map(|res| res.map(|e| {
+                          match e {
+                              Ok(dir) => find_matches_in_dir_or_file(dir, pattern),
+                              Err(e) => Vec::new(),
+                          }
+                      }));
+        match dir_matches {
+            Ok(v) => {
+                let mut vec: Vec<String> = v.flat_map(|f| f.into_iter()).collect::<Vec<String>>();
+                results.append(&mut vec);
+            },
+            Err(e) => println!("Failed list dir, {:?}", e),
+        }
+     } else {
+         let matches = std::fs::read_to_string(entry.path())
+            .map(|content| find_matches_in_file(&content, pattern));
+         match(matches) {
+             Ok(v) => {
+                 let mut borrowed_v = v;
+                 results.append(&mut borrowed_v);
+             }
+             Err(e) => println!("Failed to read file, {:?}", e),
+         };
+     }
+
+     results
 }
 
 fn find_matches_in_file(content: &String, pattern: &String) -> Vec<String> {
