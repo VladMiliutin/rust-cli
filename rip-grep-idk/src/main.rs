@@ -1,14 +1,9 @@
-use std::{path::PathBuf, io, error::Error, fs::{ReadDir, DirEntry}};
+use std::{path::PathBuf, io::Error, fs, fs::DirEntry};
 
 struct Cli {
     pattern: String,
     path: PathBuf,
     options: Vec<String>,
-}
-
-struct File {
-    path: String,
-    content: String,
 }
 
 fn main() {
@@ -28,10 +23,10 @@ fn main() {
     }
 }
 
-fn find_matches(path: &PathBuf, pattern: &String) -> Result<Vec<String>, std::io::Error> {
+fn find_matches(path: &PathBuf, pattern: &String) -> Result<Vec<String>, Error> {
     println!("Reading path: {}", path.to_str().unwrap());
     let mut results: Vec<String> = Vec::new();
-    let last_dir = std::fs::read_dir(path)?
+    fs::read_dir(path)?
         .map(|res| {
             res.map(|e| find_matches_in_dir_or_file(e, pattern))
                 .map(|e| match e {
@@ -47,11 +42,11 @@ fn find_matches(path: &PathBuf, pattern: &String) -> Result<Vec<String>, std::io
     Ok(results)
 }
 
-fn find_matches_in_dir_or_file(entry: DirEntry, pattern: &String) -> Result<Vec<String>, std::io::Error> {
+fn find_matches_in_dir_or_file(entry: DirEntry, pattern: &String) -> Result<Vec<String>, Error> {
      if entry.path().is_dir() {
          find_matches(&entry.path(), pattern)
      } else {
-        std::fs::read_to_string(entry.path())
+        fs::read_to_string(entry.path())
             .map(|content| find_matches_in_file(&content, pattern))
      }
 }
