@@ -45,16 +45,16 @@ fn find_matches(path: &PathBuf, pattern: &String) -> Result<Vec<String>, Error> 
 
 fn find_matches_in_dir_or_file(entry: DirEntry, pattern: &String) -> Result<Vec<String>, Error> {
     let path = entry.path();
-     if path.is_dir() {
-         find_matches(&path, pattern)
-     } else {
+    if path.is_dir() {
+        find_matches(&path, pattern)
+    } else {
         fs::read_to_string(entry.path())
             .map(|content| find_matches_in_file(&content, pattern))
             .map(|file_matches| {
                 print_file_matches(&path, &file_matches);
                 file_matches
             })
-     }
+    }
 }
 
 fn print_file_matches(path: &PathBuf, file_matches: &Vec<String>) {
