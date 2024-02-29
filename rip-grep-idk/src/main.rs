@@ -6,6 +6,16 @@ struct Cli {
     options: Vec<String>,
 }
 
+struct Match {
+    line_number: u32,
+    line_text: String,
+}
+
+struct FileMatches {
+    path: PathBuf,
+    results: Vec<Match>,
+}
+
 fn main() {
     let mut args = std::env::args();
     let pattern = args.nth(args.len() - 2).expect("Missing: `pattern`");
@@ -18,16 +28,16 @@ fn main() {
         options: read_options(),
     };
 
-    if find_matches(&args.path, &args.pattern).is_err() {
+    if find_dir_matches(&args.path, &args.pattern).is_err() {
         println!("Failed to scan {:?}", &path);
     }
 }
 
-fn find_matches(path: &PathBuf, pattern: &String) -> Result<Vec<String>, Error> {
-    let mut results: Vec<String> = Vec::new();
+fn find_dir_matches(path: &PathBuf, pattern: &String) -> Result<Vec<FileMatches>, Error> {
+    let mut results: Vec<FileMatches> = Vec::new();
     fs::read_dir(path)?
         .map(|res| {
-            res.map(|e| find_matches_in_dir_or_file(e, pattern))
+            res.map(|e| find_matches(e, pattern))
                 .map(|e| match e {
                     Ok(v) => {
                         let mut vec = v;
@@ -43,35 +53,56 @@ fn find_matches(path: &PathBuf, pattern: &String) -> Result<Vec<String>, Error> 
     Ok(results)
 }
 
-fn find_matches_in_dir_or_file(entry: DirEntry, pattern: &String) -> Result<Vec<String>, Error> {
+fn find_matches(entry: DirEntry, pattern: &String) -> Result<Vec<FileMatches>, Error> {
     let path = entry.path();
     if path.is_dir() {
-        find_matches(&path, pattern)
+        find_dir_matches(&path, pattern)
     } else {
-        fs::read_to_string(entry.path())
+        let mut single_file_match: Vec<FileMatches> = Vec::new();
+        let file_matches = fs::read_to_string(entry.path())
             .map(|content| find_matches_in_file(&content, pattern))
             .map(|file_matches| {
-                print_file_matches(&path, &file_matches);
-                file_matches
-            })
+                let file_match = FileMatches { path: path, results: file_matches };
+                print_file_matches(&file_match);
+                file_match
+            });
+
+        if file_matches.is_ok() {
+            single_file_match.push(file_matches.unwrap());
+        }
+
+        Ok(single_file_match)
     }
 }
 
-fn print_file_matches(path: &PathBuf, file_matches: &Vec<String>) {
-    if !file_matches.is_empty() {
-        println!("{}", path.display());
-        let iter = file_matches.iter();
-        iter.for_each(|e| println!("{}", e));
+fn print_file_matches(file: &FileMatches) {
+    if !file.results.is_empty() {
+        println!("{}", file.path.display());
+        let iter = file.results.iter();
+        iter.for_each(|e| println!("{}: {}", e.line_number, e.line_text));
     }
 }
 
-fn find_matches_in_file(content: &String, pattern: &String) -> Vec<String> {
-    let mut matches: Vec<String> = Vec::new();
+fn find_matches_in_file(content: &String, pattern: &String) -> Vec<Match> {
+    let mut matches: Vec<Match> = Vec::new();
 
-    for line in content.lines() {
-       if line.contains(pattern) {
-           matches.push(line.to_string());
-       }
+    let mut lines = content.lines();
+    let mut line_number: u32 = 0;
+
+    loop {
+        let line = lines.next();
+
+        if line == None {
+            break;
+        }
+
+        let line_text = line.unwrap();
+
+        if line_text.contains(pattern) {
+            matches.push(Match { line_number: line_number, line_text: line_text.to_string() });
+        }
+
+        line_number += 1;
     }
 
     return matches;
