@@ -24,7 +24,6 @@ fn main() {
 }
 
 fn find_matches(path: &PathBuf, pattern: &String) -> Result<Vec<String>, Error> {
-    println!("Reading path: {}", path.to_str().unwrap());
     let mut results: Vec<String> = Vec::new();
     fs::read_dir(path)?
         .map(|res| {
@@ -34,7 +33,9 @@ fn find_matches(path: &PathBuf, pattern: &String) -> Result<Vec<String>, Error> 
                         let mut vec = v;
                         results.append(&mut vec)
                     },
-                    Err(e) => println!("Failed to list folder: {:?}", e),
+                    Err(e) => {
+                        //println!("Failed to read, should be debug here: {:?}", e)
+                    },
                 })
         })
         .last();
@@ -43,12 +44,25 @@ fn find_matches(path: &PathBuf, pattern: &String) -> Result<Vec<String>, Error> 
 }
 
 fn find_matches_in_dir_or_file(entry: DirEntry, pattern: &String) -> Result<Vec<String>, Error> {
-     if entry.path().is_dir() {
-         find_matches(&entry.path(), pattern)
+    let path = entry.path();
+     if path.is_dir() {
+         find_matches(&path, pattern)
      } else {
         fs::read_to_string(entry.path())
             .map(|content| find_matches_in_file(&content, pattern))
+            .map(|file_matches| {
+                print_file_matches(&path, &file_matches);
+                file_matches
+            })
      }
+}
+
+fn print_file_matches(path: &PathBuf, file_matches: &Vec<String>) {
+    if !file_matches.is_empty() {
+        println!("{}", path.display());
+        let iter = file_matches.iter();
+        iter.for_each(|e| println!("{}", e));
+    }
 }
 
 fn find_matches_in_file(content: &String, pattern: &String) -> Vec<String> {
@@ -57,7 +71,6 @@ fn find_matches_in_file(content: &String, pattern: &String) -> Vec<String> {
     for line in content.lines() {
        if line.contains(pattern) {
            matches.push(line.to_string());
-           println!("Line: {}", line);
        }
     }
 
