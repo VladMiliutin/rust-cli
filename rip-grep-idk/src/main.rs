@@ -1,4 +1,4 @@
-use std::{path::PathBuf, io::Error, fs, fs::DirEntry};
+use std::{path::PathBuf, io::Error, fs};
 
 struct Cli {
     pattern: String,
@@ -28,51 +28,51 @@ fn main() {
         options: read_options(),
     };
 
-    if find_dir_matches(&args.path, &args.pattern).is_err() {
+    if find_dir_matches(args.path, &args.pattern).is_err() {
         println!("Failed to scan {:?}", &path);
     }
 }
 
-fn find_dir_matches(path: &PathBuf, pattern: &String) -> Result<Vec<FileMatches>, Error> {
+fn find_dir_matches(path: PathBuf, pattern: &String) -> Result<Vec<FileMatches>, Error> {
     let mut results: Vec<FileMatches> = Vec::new();
-    fs::read_dir(path)?
-        .map(|res| {
-            res.map(|e| find_matches(e, pattern))
-                .map(|e| match e {
-                    Ok(v) => {
-                        let mut vec = v;
-                        results.append(&mut vec)
-                    },
-                    Err(e) => {
-                        //println!("Failed to read, should be debug here: {:?}", e)
-                    },
+    let mut dirs: Vec<PathBuf> = Vec::new();
+    dirs.push(path);
+
+    loop {
+        let dir_opt = dirs.pop();
+
+        if dir_opt == None {
+            break;
+        }
+
+        fs::read_dir(dir_opt.unwrap())?
+            .map(|res| {
+                res.map(|e| {
+                    if e.path().is_dir() {
+                        dirs.push(e.path());
+                    }
+
+                    find_matches(e.path(), pattern)
+                        .map(|e| {
+                            results.push(e)
+                        })
                 })
-        })
+            })
         .last();
+    }
+
 
     Ok(results)
 }
 
-fn find_matches(entry: DirEntry, pattern: &String) -> Result<Vec<FileMatches>, Error> {
-    let path = entry.path();
-    if path.is_dir() {
-        find_dir_matches(&path, pattern)
-    } else {
-        let mut single_file_match: Vec<FileMatches> = Vec::new();
-        let file_matches = fs::read_to_string(entry.path())
-            .map(|content| find_matches_in_file(&content, pattern))
-            .map(|file_matches| {
-                let file_match = FileMatches { path: path, results: file_matches };
-                print_file_matches(&file_match);
-                file_match
-            });
-
-        if file_matches.is_ok() {
-            single_file_match.push(file_matches.unwrap());
-        }
-
-        Ok(single_file_match)
-    }
+fn find_matches(entry: PathBuf, pattern: &String) -> Result<FileMatches, Error> {
+    fs::read_to_string(&entry)
+        .map(|content| find_matches_in_file(&content, pattern))
+        .map(|file_matches| {
+            let file_match = FileMatches { path: entry, results: file_matches };
+            print_file_matches(&file_match);
+            file_match
+        })
 }
 
 fn print_file_matches(file: &FileMatches) {
