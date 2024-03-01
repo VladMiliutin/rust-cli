@@ -87,7 +87,7 @@ fn find_matches_in_file(content: &String, pattern: &String) -> Vec<Match> {
     let mut matches: Vec<Match> = Vec::new();
 
     let mut lines = content.lines();
-    let mut line_number: u32 = 0;
+    let mut line_number: u32 = 1;
 
     loop {
         let line = lines.next();
