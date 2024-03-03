@@ -1,15 +1,10 @@
 pub mod cli {
     use std::{path::PathBuf};
+    use rip_grep::{OutputFormat};
 
     const HELP_OPT: &str = "--help";
     const FORMAT_OPT: &str = "--format";
     const VERBOSE_OPT: &str = "--verbose";
-
-    #[derive(Debug)]
-    enum OutputFormat {
-        JSON,
-        PlainText
-    }
 
     #[derive(Debug)]
     pub struct Cli {
@@ -29,7 +24,7 @@ pub mod cli {
             let copied_options = options.to_vec();
 
             let mut has_help_opt = false;
-            let mut verbose = true;
+            let mut verbose = false;
             let mut format: OutputFormat = OutputFormat::PlainText;
 
             for opt in options {
@@ -52,8 +47,8 @@ pub mod cli {
                 }
             }
 
-            let pattern = args.nth(args.len() - 2).expect("Missing: `pattern`");
-            let path = args.last().expect("Missing: `path`");
+            let pattern = args.nth(args.len() - 2).expect("Missing: `pattern`. Example: `rig_grep Hello .`");
+            let path = args.last().expect("Missing: `path`. Example: `rig_grep Hello .`");
             let path_buff = parse_path(&path);
 
             Cli {
@@ -65,6 +60,15 @@ pub mod cli {
                 format: format,
                 options: copied_options,
             }
+        }
+
+        pub fn show_help() {
+            println!("Welcome to simple ripgrep implementation made by VladM during learning Rust");
+            println!("Options: ");
+            println!("--help: Call help, I guess you know it already :)");
+            println!("--verbose: values: 'true', 'false'. Show folders and files that are scanned");
+            println!("--format: values: 'JSON', 'PlainText'. Return format");
+            println!("Example of usage: `rig_grep Hello .");
         }
     }
 

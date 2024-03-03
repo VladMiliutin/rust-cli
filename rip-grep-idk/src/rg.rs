@@ -1,7 +1,7 @@
-use self::rg::find_matches_in_file;
-
 pub mod rg {
     use std::{path::PathBuf, io::Error, fs};
+
+    use rip_grep::OutputFormat;
 
     pub const RESET_TERMINAL: &str = "\x1b[0m";
     pub const RED_COLOR: &str = "\x1b[31m";
@@ -18,7 +18,7 @@ pub mod rg {
         pub results: Vec<Match>,
     }
 
-    pub fn find_dir_matches(path: PathBuf, pattern: &String) -> Result<Vec<FileMatches>, Error> {
+    pub fn find_dir_matches(path: PathBuf, pattern: &String, output_format: OutputFormat, verbose: bool) -> Result<Vec<FileMatches>, Error> {
         let mut results: Vec<FileMatches> = Vec::new();
         let mut dirs: Vec<PathBuf> = Vec::new();
         dirs.push(path);
@@ -37,7 +37,7 @@ pub mod rg {
                             dirs.push(e.path());
                         }
 
-                        find_matches(e.path(), pattern)
+                        find_matches(e.path(), pattern, verbose)
                             .map(|e| {
                                 results.push(e)
                             })
@@ -50,7 +50,7 @@ pub mod rg {
         Ok(results)
     }
 
-    pub fn find_matches(entry: PathBuf, pattern: &String) -> Result<FileMatches, Error> {
+    pub fn find_matches(entry: PathBuf, pattern: &String, verbose: bool) -> Result<FileMatches, Error> {
         fs::read_to_string(&entry)
             .map(|content| find_matches_in_file(&content, pattern))
             .map(|file_matches| {
