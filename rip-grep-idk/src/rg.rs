@@ -1,12 +1,8 @@
 pub mod rg {
     use std::{path::PathBuf, io::Error, fs};
 
-    use rip_grep::OutputFormat;
+    use rip_grep::{OutputFormat, RESET_TERMINAL, RED_COLOR, YELLOW_COLOR, BLUE_COLOR, BOLD};
 
-    pub const RESET_TERMINAL: &str = "\x1b[0m";
-    pub const RED_COLOR: &str = "\x1b[31m";
-    pub const BLUE_COLOR: &str = "\x1b[34m";
-    pub const BOLD: &str = "\x1b[1m";
 
     pub struct Match {
         pub line_number: u32,
@@ -30,17 +26,26 @@ pub mod rg {
                 break;
             }
 
-            fs::read_dir(dir_opt.unwrap())?
+            let dir = dir_opt.unwrap();
+            if verbose {
+                println!("{YELLOW_COLOR}Reading folder: {:?}{RESET_TERMINAL}", dir);
+            }
+
+            fs::read_dir(dir)?
                 .map(|res| {
                     res.map(|e| {
                         if e.path().is_dir() {
                             dirs.push(e.path());
                         }
 
-                        find_matches(e.path(), pattern, verbose)
-                            .map(|e| {
-                                results.push(e)
-                            })
+                        match find_matches(e.path(), pattern, verbose) {
+                            Ok(v) => results.push(v),
+                            Err(e) => {
+                                if verbose {
+                                    println!("{RED_COLOR}Failed to read file. Error = {:?}{RESET_TERMINAL}", e);
+                                }
+                            },
+                        }
                     })
                 })
             .last();
@@ -51,6 +56,9 @@ pub mod rg {
     }
 
     pub fn find_matches(entry: PathBuf, pattern: &String, verbose: bool) -> Result<FileMatches, Error> {
+        if verbose {
+            println!("{YELLOW_COLOR}Reading file: {:?}{RESET_TERMINAL}", entry);
+        }
         fs::read_to_string(&entry)
             .map(|content| find_matches_in_file(&content, pattern))
             .map(|file_matches| {
@@ -98,7 +106,7 @@ pub mod rg {
 fn find_matches() {
     let content = "Hello\nMy World\n";
     let pattern = "World";
-    let result = find_matches_in_file(&content, &pattern);
+    let result = rg::find_matches_in_file(&content, &pattern);
     assert_eq!(result.len(), 1);
     let file_match = result.first().unwrap();
     assert_eq!(file_match.line_text, "My World\n");
