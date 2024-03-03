@@ -3,5 +3,5 @@
 version = 3
 
 [[package]]
-name = "rip-grep-idk"
+name = "rip_grep"
 version = "0.1.0"
