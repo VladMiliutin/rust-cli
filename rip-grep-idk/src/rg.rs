@@ -1,8 +1,7 @@
 pub mod rg {
     use std::{path::PathBuf, io::Error, fs};
 
-    use rip_grep::{OutputFormat, RESET_TERMINAL, RED_COLOR, YELLOW_COLOR, BLUE_COLOR, BOLD};
-
+    use rip_grep::{OutputFormat, TERMINAL_RESET, TERMINAL_RED_TEXT, TERMINAL_YELLOW_TEXT, TERMINAL_BLUE_TEXT, TERMINAL_BOLD_TEXT};
 
     pub struct Match {
         pub line_number: u32,
@@ -28,7 +27,7 @@ pub mod rg {
 
             let dir = dir_opt.unwrap();
             if verbose {
-                println!("{YELLOW_COLOR}Reading folder: {:?}{RESET_TERMINAL}", dir);
+                println!("{TERMINAL_YELLOW_TEXT}Reading folder: {:?}{TERMINAL_RESET}", dir);
             }
 
             fs::read_dir(dir)?
@@ -42,7 +41,7 @@ pub mod rg {
                             Ok(v) => results.push(v),
                             Err(e) => {
                                 if verbose {
-                                    println!("{RED_COLOR}Failed to read file. Error = {:?}{RESET_TERMINAL}", e);
+                                    println!("{TERMINAL_RED_TEXT}Failed to read file. Error = {:?}{TERMINAL_RESET}", e);
                                 }
                             },
                         }
@@ -57,7 +56,7 @@ pub mod rg {
 
     pub fn find_matches(entry: PathBuf, pattern: &String, verbose: bool) -> Result<FileMatches, Error> {
         if verbose {
-            println!("{YELLOW_COLOR}Reading file: {:?}{RESET_TERMINAL}", entry);
+            println!("{TERMINAL_YELLOW_TEXT}Reading file: {:?}{TERMINAL_RESET}", entry);
         }
         fs::read_to_string(&entry)
             .map(|content| find_matches_in_file(&content, pattern))
@@ -68,11 +67,12 @@ pub mod rg {
             })
     }
 
+    // should be in separate func
     pub fn print_file_matches(file: &FileMatches) {
         if !file.results.is_empty() {
-            println!("{BLUE_COLOR}{BOLD}{}{RESET_TERMINAL}", file.path.display());
+            println!("{TERMINAL_BLUE_TEXT}{TERMINAL_BOLD_TEXT}{}{TERMINAL_RESET}", file.path.display());
             let iter = file.results.iter();
-            iter.for_each(|e| println!("{RED_COLOR}{}:{RESET_TERMINAL}{}", e.line_number, e.line_text));
+            iter.for_each(|e| println!("{TERMINAL_RED_TEXT}{}:{TERMINAL_RESET}{}", e.line_number, e.line_text));
         }
     }
 

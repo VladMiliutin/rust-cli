@@ -3,8 +3,8 @@ pub enum OutputFormat {
     JSON,
     PlainText
 }
-pub const RESET_TERMINAL: &str = "\x1b[0m";
-pub const RED_COLOR: &str = "\x1b[31m";
-pub const YELLOW_COLOR: &str = "\x1b[33m";
-pub const BLUE_COLOR: &str = "\x1b[34m";
-pub const BOLD: &str = "\x1b[1m";
+pub const TERMINAL_RESET: &str = "\x1b[0m";
+pub const TERMINAL_RED_TEXT: &str = "\x1b[31m";
+pub const TERMINAL_YELLOW_TEXT: &str = "\x1b[33m";
+pub const TERMINAL_BLUE_TEXT: &str = "\x1b[34m";
+pub const TERMINAL_BOLD_TEXT: &str = "\x1b[1m";
