@@ -1,6 +1,11 @@
 pub mod rg {
     use std::{path::PathBuf, io::Error, fs};
 
+    pub const RESET_TERMINAL: &str = "\x1b[0m";
+    pub const RED_COLOR: &str = "\x1b[31m";
+    pub const BLUE_COLOR: &str = "\x1b[34m";
+    pub const BOLD: &str = "\x1b[1m";
+
     pub struct Match {
         line_number: u32,
         line_text: String,
@@ -55,9 +60,9 @@ pub mod rg {
 
     pub fn print_file_matches(file: &FileMatches) {
         if !file.results.is_empty() {
-            println!("{}", file.path.display());
+            println!("{BLUE_COLOR}{BOLD}{}{RESET_TERMINAL}", file.path.display());
             let iter = file.results.iter();
-            iter.for_each(|e| println!("{}: {}", e.line_number, e.line_text));
+            iter.for_each(|e| println!("{RED_COLOR}{}:{RESET_TERMINAL}{}", e.line_number, e.line_text));
         }
     }
 
