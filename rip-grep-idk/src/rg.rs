@@ -1,3 +1,5 @@
+use self::rg::find_matches_in_file;
+
 pub mod rg {
     use std::{path::PathBuf, io::Error, fs};
 
@@ -7,13 +9,13 @@ pub mod rg {
     pub const BOLD: &str = "\x1b[1m";
 
     pub struct Match {
-        line_number: u32,
-        line_text: String,
+        pub line_number: u32,
+        pub line_text: String,
     }
 
     pub struct FileMatches {
-        path: PathBuf,
-        results: Vec<Match>,
+        pub path: PathBuf,
+        pub results: Vec<Match>,
     }
 
     pub fn find_dir_matches(path: PathBuf, pattern: &String) -> Result<Vec<FileMatches>, Error> {
@@ -66,7 +68,7 @@ pub mod rg {
         }
     }
 
-    pub fn find_matches_in_file(content: &String, pattern: &String) -> Vec<Match> {
+    pub fn find_matches_in_file(content: &str, pattern: &str) -> Vec<Match> {
         let mut matches: Vec<Match> = Vec::new();
 
         let mut lines = content.lines();
@@ -90,4 +92,14 @@ pub mod rg {
 
         return matches;
     }
+}
+
+#[test]
+fn find_matches() {
+    let content = "Hello\nMy World\n";
+    let pattern = "World";
+    let result = find_matches_in_file(&content, &pattern);
+    assert_eq!(result.len(), 1);
+    let file_match = result.first().unwrap();
+    assert_eq!(file_match.line_text, "My World\n");
 }
