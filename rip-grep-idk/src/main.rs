@@ -1,5 +1,6 @@
 pub mod rg;
 pub mod cli;
+pub mod json;
 
 use cli::cli::Cli;
 

@@ -104,10 +104,10 @@ pub mod rg {
 
 #[test]
 fn find_matches() {
-    let content = "Hello\nMy World\n";
+    let content = "Hello\nMy World\t";
     let pattern = "World";
     let result = rg::find_matches_in_file(&content, &pattern);
     assert_eq!(result.len(), 1);
     let file_match = result.first().unwrap();
-    assert_eq!(file_match.line_text, "My World\n");
+    assert_eq!(file_match.line_text, "My World\t");
 }
