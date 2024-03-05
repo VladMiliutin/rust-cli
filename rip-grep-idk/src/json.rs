@@ -3,7 +3,13 @@
 pub mod JSON {
 
     use std::{collections::{HashMap}};
+    use string_builder::Builder;
 
+    const OBJECT_START: char = '{';
+    const OBJECT_END: char = '}';
+    const KEY_VALUE_SPLITTER: char = ':';
+    const QUOTE: char = '"';
+    const DELIMITER: char = ',';
     /**
      * This first iteration of implementation, maybe I'll use some MappingConfig with class
      * description and it's filed later. Who knows.
@@ -23,10 +29,15 @@ pub mod JSON {
     }
 
     impl Json {
+
         pub fn from_map(map: HashMap<String, String>) -> Json {
             Json {
                 map: map,
             }
+        }
+
+        pub fn default() -> Json {
+            Json::from_map(HashMap::new())
         }
 
         pub fn get(&self, key: &str) -> Option<&String> {
@@ -37,8 +48,29 @@ pub mod JSON {
            self.map.insert(key, value);
         }
 
-        pub fn default() -> Json {
-           Json { map: HashMap::new() }
+        pub fn to_string(&self) -> String {
+            let mut sb = Builder::default();
+            sb.append(OBJECT_START);
+            let map_iter = self.map.iter();
+            let map_size = self.map.len();
+            let mut iter = 0;
+            for (key, value) in map_iter {
+                iter += 1;
+                sb.append(QUOTE);
+                sb.append(key.to_string());
+                sb.append(QUOTE);
+                sb.append(KEY_VALUE_SPLITTER);
+                sb.append(QUOTE);
+                sb.append(value.to_string());
+                sb.append(QUOTE);
+
+                if iter < map_size {
+                    sb.append(DELIMITER);
+                }
+            }
+
+            sb.append(OBJECT_END);
+            sb.string().unwrap()
         }
     }
 
@@ -130,5 +162,18 @@ mod test {
         let expected_json = Json::from_map(json_map);
 
         assert_eq!(result, Some(expected_json));
+    }
+
+    #[test]
+    fn test_simepl_json_to_string() {
+        let mut json_map: HashMap<String, String> = HashMap::new();
+        json_map.insert("key1".to_string(), "value1".to_string());
+        json_map.insert("key2".to_string(), "value2".to_string());
+        let json = Json::from_map(json_map);
+
+        let expected = "{\"key1\":\"value1\",\"key2\":\"value2\"}";
+
+        assert_eq!(json.to_string(), expected);
+        assert_ne!(json.to_string(), "{}");
     }
 }
