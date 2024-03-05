@@ -1,3 +1,5 @@
+// This implementation is very simple and can't handle nested objects/maps/vectors
+// I'll try to create a better serde-json in separate project and later migrate this to new serde
 pub mod JSON {
 
     use std::{collections::{HashMap}};
@@ -6,37 +8,44 @@ pub mod JSON {
      * This first iteration of implementation, maybe I'll use some MappingConfig with class
      * description and it's filed later. Who knows.
      */
-    pub struct FieldDescriptor<'a, T> {
+    pub struct FieldDescriptor<'a> {
         pub field_name: String,
-        pub callback: Box<dyn FnOnce() -> T + 'a>,
-    }
-
-    impl<'a, T> FieldDescriptor<'a, T>
-    {
+        pub callback: Box<dyn FnOnce() -> String + 'a>,
     }
 
     pub trait Serializable {
-        fn get_serializable_fields(&self) -> Vec<FieldDescriptor<String>>;
+        fn get_serializable_fields(&self) -> Vec<FieldDescriptor>;
     }
 
-    // oh, I've no idea of what I'm doing :)
     #[derive(Debug)]
     pub struct Json {
         map: HashMap<String, String>,
     }
 
     impl Json {
-       pub fn get(&self, key: &str) -> Option<&String> {
+        pub fn from_map(map: HashMap<String, String>) -> Json {
+            Json {
+                map: map,
+            }
+        }
+
+        pub fn get(&self, key: &str) -> Option<&String> {
            self.map.get(key)
-       }
+        }
 
-       pub fn put(&mut self, key: String, value: String) {
+        pub fn put(&mut self, key: String, value: String) {
            self.map.insert(key, value);
-       }
+        }
 
-       pub fn default() -> Json {
+        pub fn default() -> Json {
            Json { map: HashMap::new() }
-       }
+        }
+    }
+
+    impl PartialEq for Json {
+        fn eq(&self, other: &Self) -> bool {
+            self.map == other.map
+        }
     }
 
     pub struct JsonMapper {
@@ -88,8 +97,8 @@ mod test {
     }
 
     impl Serializable for SimpleObj {
-        fn get_serializable_fields(&self) -> Vec<FieldDescriptor<String>> {
-            let mut fields: Vec<FieldDescriptor<String>>  = Vec::new();
+        fn get_serializable_fields(&self) -> Vec<FieldDescriptor> {
+            let mut fields: Vec<FieldDescriptor>  = Vec::new();
             fields.push(
                 FieldDescriptor {
                     field_name: "int_val".to_string(),
@@ -115,9 +124,10 @@ mod test {
         };
         let result = mapper.to_json(Box::new(obj_to_test));
 
-        let expected_json = Json {
-            map: HashMap::new()
-        };
+        let mut json_map: HashMap<String, String> = HashMap::new();
+        json_map.insert("int_val".to_string(), "10".to_string());
+        json_map.insert("str_val".to_string(), "Hello World".to_string());
+        let expected_json = Json::from_map(json_map);
 
         assert_eq!(result, Some(expected_json));
     }
