@@ -1,8 +1,8 @@
 // This implementation is very simple and can't handle nested objects/maps/vectors
 // I'll try to create a better serde-json in separate project and later migrate this to new serde
 pub mod json {
+    use std::collections::BTreeMap;
 
-    use std::{collections::{HashMap}};
     use string_builder::Builder;
 
     const ARRAY_START: char = '[';
@@ -13,17 +13,8 @@ pub mod json {
     const QUOTE: char = '"';
     const DELIMITER: char = ',';
 
-    /**
-     * This first iteration of implementation, maybe I'll use some MappingConfig with class
-     * description and it's filed later. Who knows.
-     */
-    pub struct FieldDescriptor<'a> {
-        pub field_name: String,
-        pub callback: Box<dyn FnOnce() -> String + 'a>,
-    }
-
     pub trait Serializable {
-        fn get_serializable_fields(&self) -> Vec<FieldDescriptor>;
+        fn serialize(self) -> JsonValue;
     }
 
     #[derive(Debug)]
@@ -35,20 +26,38 @@ pub mod json {
 
     impl PartialEq for JsonValue {
         fn eq(&self, other: &Self) -> bool {
-            self == other
+            match (self, other) {
+                (JsonValue::JsonObject(o1), JsonValue::JsonObject(o2)) => o1 == o2,
+                (JsonValue::JsonString(str1), JsonValue::JsonString(str2)) => str1 == str2,
+                (JsonValue::JsonArray(vec1), JsonValue::JsonArray(vec2)) => vec1 == vec2,
+                _ => false,
+            }
         }
     }
 
     #[derive(Debug)]
     pub struct Json {
-        map: HashMap<String, JsonValue>,
+        map: BTreeMap<String, JsonValue>,
         vec: Vec<JsonValue>,
         pub is_array: bool,
     }
 
+    pub fn serialize_str(value: &str) -> JsonValue {
+        JsonValue::JsonString(value.to_string())
+    }
+
+    pub fn serialize_string(value: String) -> JsonValue {
+        return JsonValue::JsonString(value);
+    }
+
+    pub fn serialize_vec<T: Serializable>(value: Vec<T>) -> JsonValue {
+        let json_vec = value.into_iter().map(|v| v.serialize()).collect();
+        JsonValue::JsonArray(json_vec)
+    }
+
     impl Json {
 
-        pub fn from_map(map: HashMap<String, JsonValue>) -> Json {
+        pub fn from_map(map: BTreeMap<String, JsonValue>) -> Json {
             Json {
                 map,
                 vec: Vec::with_capacity(0),
@@ -58,14 +67,26 @@ pub mod json {
 
         pub fn from_vec(vec: Vec<JsonValue>) -> Json {
             Json {
-                map: HashMap::with_capacity(0),
+                map: BTreeMap::new(),
                 vec,
                 is_array: true,
             }
         }
 
         pub fn default() -> Json {
-            Json::from_map(HashMap::new())
+            Json::from_map(BTreeMap::new())
+        }
+
+        pub fn nth(&self, index: usize) -> Option<&JsonValue> {
+            if self.vec.get(index).is_some() {
+                Some(self.vec.get(index).unwrap())
+            } else {
+                None
+            }
+        }
+
+        pub fn push(&mut self, value: JsonValue) {
+            self.vec.push(value)
         }
 
         pub fn get(&self, key: &str) -> Option<&JsonValue> {
@@ -118,6 +139,7 @@ pub mod json {
             let vec_size = vec.len();
             let mut iter = 0;
             for value in vec {
+                iter += 1;
                 self.write_to_sb(&mut sb, &value);
                 if iter < vec_size {
                     sb.append(DELIMITER);
@@ -138,102 +160,77 @@ pub mod json {
                 JsonValue::JsonArray(arr) => sb.append(self.write_array(arr)),
             }
         }
+
+        pub fn put_str(mut self, key: &str, value: String) -> Self {
+            self.put(key.to_string(), serialize_string(value));
+            self
+        }
+
+        pub fn put_vec<T: Serializable>(mut self, key: &str, value: Vec<T>) -> Self {
+            self.put(key.to_string(), serialize_vec(value));
+            self
+        }
+
+        pub fn put_obj(mut self, key: &str, value: Json) -> Self {
+            self.put(key.to_string(), JsonValue::JsonObject(value));
+            self
+        }
     }
 
     impl PartialEq for Json {
         fn eq(&self, other: &Self) -> bool {
-            self.map == other.map
-        }
-    }
-
-    pub struct JsonMapper {
-    }
-
-    impl JsonMapper {
-
-        pub fn default() -> JsonMapper {
-            JsonMapper {
-            }
-        }
-
-        pub fn to_json(&self, value: Box<dyn Serializable>) -> Option<Json> {
-            let fields = value.get_serializable_fields();
-
-            let mut json = Json::default();
-            for field in fields {
-                let field_name = field.field_name;
-                let f = field.callback;
-                let value = f();
-                json.put(field_name, JsonValue::JsonString(value));
+            if self.is_array {
+                return self.is_array == other.is_array && self.vec == self.vec;
             }
 
-            return Some(json);
+            self.map.keys().len() == other.map.keys().len() && self.map == other.map
         }
     }
+
 }
 
 #[cfg(test)]
 mod test {
+    use std::collections::BTreeMap;
 
-    use std::collections::HashMap;
-    use string_builder::ToBytes;
-
-    use super::{*, json::*};
+    use super::*;
+    use json::*;
 
     struct SimpleObj {
         pub int_val: i32,
         pub str_val: String,
     }
 
-    impl SimpleObj {
-        fn get_int_val(&self,) -> String {
-            self.int_val.to_string()
-        }
-
-        fn get_str_val(&self,) -> String {
-            self.str_val.to_string()
-        }
-    }
-
     impl Serializable for SimpleObj {
-        fn get_serializable_fields(&self) -> Vec<FieldDescriptor> {
-            let mut fields: Vec<FieldDescriptor>  = Vec::new();
-            fields.push(
-                FieldDescriptor {
-                    field_name: "int_val".to_string(),
-                    callback: Box::new(|| self.get_int_val()),
-                }
-            );
-            fields.push(
-                FieldDescriptor {
-                    field_name: "str_val".to_string(),
-                    callback: Box::new(|| self.get_str_val()),
-                }
-            );
-            fields
+        fn serialize(self) -> JsonValue {
+            let json_obj = Json::default()
+                .put_str("int_val", self.int_val.to_string())
+                .put_str("str_val", self.str_val);
+
+            JsonValue::JsonObject(json_obj)
         }
     }
 
     #[test]
-    fn test_simple_json() {
-        let mapper = JsonMapper::default();
+    fn test_value_serialization() {
         let obj_to_test = SimpleObj {
             int_val: 10,
             str_val: "Hello World".to_string(),
         };
-        let result = mapper.to_json(Box::new(obj_to_test));
 
-        let mut json_map: HashMap<String, JsonValue> = HashMap::new();
+        let real = obj_to_test.serialize();
+
+        let mut json_map: BTreeMap<String, JsonValue> = BTreeMap::new();
         json_map.insert("int_val".to_string(), JsonValue::JsonString("10".to_string()));
         json_map.insert("str_val".to_string(), JsonValue::JsonString("Hello World".to_string()));
         let expected_json = Json::from_map(json_map);
 
-        assert_eq!(result, Some(expected_json));
+        assert_eq!(real, JsonValue::JsonObject(expected_json));
     }
 
     #[test]
-    fn test_simple_json_to_string() {
-        let mut json_map: HashMap<String, JsonValue> = HashMap::new();
+    fn test_json_to_string() {
+        let mut json_map: BTreeMap<String, JsonValue> = BTreeMap::new();
         json_map.insert("key1".to_string(), JsonValue::JsonString("value1".to_string()));
         json_map.insert("key2".to_string(), JsonValue::JsonString("value2".to_string()));
         let expected = "{\"key1\":\"value1\",\"key2\":\"value2\"}";
