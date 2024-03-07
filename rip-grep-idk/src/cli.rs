@@ -20,7 +20,7 @@ pub mod cli {
     impl Cli {
         pub fn parse() -> Cli {
             let mut args = std::env::args();
-            let mut options = read_options();
+            let options = read_options();
             let copied_options = options.to_vec();
 
             let mut has_help_opt = false;
@@ -31,13 +31,13 @@ pub mod cli {
                 // I don't understand enums in Rust :)
                 if opt.starts_with(HELP_OPT) {
                     has_help_opt = true;
-                } else if (opt.starts_with(VERBOSE_OPT)) {
+                } else if opt.starts_with(VERBOSE_OPT) {
                     let opt_value = get_option_value(&opt);
                     verbose = match opt_value {
                        "false" => false,
                        _ => true,
                     }
-                } else if (opt.starts_with(FORMAT_OPT)) {
+                } else if opt.starts_with(FORMAT_OPT) {
                     let opt_value = get_option_value(&opt);
 
                     format = match opt_value {

@@ -14,7 +14,7 @@ pub mod json {
     const DELIMITER: char = ',';
 
     pub trait Serializable {
-        fn serialize(self) -> JsonValue;
+        fn serialize(&self) -> JsonValue;
     }
 
     #[derive(Debug)]
@@ -35,6 +35,16 @@ pub mod json {
         }
     }
 
+    impl JsonValue {
+        pub fn to_string(self) -> String {
+            match self {
+                JsonValue::JsonObject(obj) => obj.to_string(),
+                JsonValue::JsonString(str) => format!("[{}]", str),
+                JsonValue::JsonArray(vec) => Json::from_vec(vec).to_string(),
+            }
+        }
+    }
+
     #[derive(Debug)]
     pub struct Json {
         map: BTreeMap<String, JsonValue>,
@@ -50,7 +60,7 @@ pub mod json {
         return JsonValue::JsonString(value);
     }
 
-    pub fn serialize_vec<T: Serializable>(value: Vec<T>) -> JsonValue {
+    pub fn serialize_vec<T: Serializable>(value: &Vec<T>) -> JsonValue {
         let json_vec = value.into_iter().map(|v| v.serialize()).collect();
         JsonValue::JsonArray(json_vec)
     }
@@ -166,7 +176,7 @@ pub mod json {
             self
         }
 
-        pub fn put_vec<T: Serializable>(mut self, key: &str, value: Vec<T>) -> Self {
+        pub fn put_vec<T: Serializable>(mut self, key: &str, value: &Vec<T>) -> Self {
             self.put(key.to_string(), serialize_vec(value));
             self
         }
@@ -202,10 +212,10 @@ mod test {
     }
 
     impl Serializable for SimpleObj {
-        fn serialize(self) -> JsonValue {
+        fn serialize(&self) -> JsonValue {
             let json_obj = Json::default()
                 .put_str("int_val", self.int_val.to_string())
-                .put_str("str_val", self.str_val);
+                .put_str("str_val", self.str_val.clone());
 
             JsonValue::JsonObject(json_obj)
         }

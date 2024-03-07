@@ -14,8 +14,13 @@ fn main() {
         return;
     }
 
-    if rg::rg::find_dir_matches(args.path, &args.pattern, args.format, args.verbose).is_err() {
-        println!("Failed to scan {:?}", args.path_str);
-    }
+    match rg::rg::find_dir_matches(args.path, &args.pattern, args.verbose) {
+        Ok(v) => {
+            rg::rg::print_vec_file_matches(&v, &args.format);
+        }
+        Err(err) => {
+            println!("Failed to scan {:?}. Error: {:?}", args.path_str, err);
+        }
+    };
 }
 
